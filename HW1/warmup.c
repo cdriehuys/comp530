@@ -40,12 +40,34 @@ int main() {
 
         /* Save character to buffer */
         buffer[index] = c;
-        index++;
 
         /* Output buffer if we've reached the line length */
-        if (index == LINE_LENGTH) {
-            printf("%s\n", buffer);
-            index = 0;
+        if (index == LINE_LENGTH - 1) {
+            /* First look ahead to see if the next char is an asterisk */
+            int next_char = fgetc(stdin);
+
+            if (buffer[index] == '*' && next_char == '*') {
+                /* We received two asterisks that should be collapsed. */
+                buffer[index] = '^';
+                printf("%s\n", buffer);
+                index = 0;
+            } else {
+                /* The next character doesn't need to be collpsed, it should
+                 * start the next buffer.
+                 */
+                printf("%s\n", buffer);
+
+                if (next_char == EOF) {
+                    break;
+                } else if (next_char == '\n') {
+                    next_char = ' ';
+                }
+
+                buffer[0] = next_char;
+                index = 1;
+            }
+        } else {
+            index++;
         }
     }
 
