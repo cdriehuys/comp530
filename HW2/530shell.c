@@ -12,14 +12,19 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+
+const int CHAR_POINTER_SIZE = sizeof (char*);
+const char* WHITESPACE = " \t\n";
 
 
 /**
  * Get a line of input from stdin.
  *
- * Input is retrieved using getline.
+ * Input is retrieved using 'getline'.
  * http://man7.org/linux/man-pages/man3/getline.3.html
  *
  * Function adapted from the following Stack Overflow question:
@@ -48,28 +53,74 @@ int get_input(char** line) {
 }
 
 
+/**
+ * Tokenize the provided input.
+ *
+ * This function splits the given line into 'arguments' where each argument is
+ * separated by whitespace.
+ *
+ * Args:
+ *     line:
+ *         A pointer to the string to tokenize. This string will be modified.
+ *
+ * Returns:
+ *     An array containing pointers to each argument. The last element in the
+ *     array is NULL.
+ */
+char** tokenize(char *line) {
+    char** tokenized = NULL;
+
+    // Perform the first split
+    char* current_token = strtok(line, WHITESPACE);
+    int num_spaces = 0;
+
+    while (current_token) {
+        // We have another token, so we need to expand our tokenized array
+        num_spaces++;
+        tokenized = realloc(tokenized, CHAR_POINTER_SIZE * num_spaces);
+
+        tokenized[num_spaces - 1] = current_token;
+
+        // Pull the next token, if any, from the above 'strtok' call.
+        current_token = strtok(NULL, WHITESPACE);
+    }
+
+    // After tokenizing the input, we need to add a NULL as the last entry
+    tokenized = realloc(tokenized, CHAR_POINTER_SIZE * (num_spaces + 1));
+    tokenized[num_spaces] = NULL;
+
+    return tokenized;
+}
+
+
 int main() {
     while (1) {
         char *line;
-        pid_t child_pid;
 
         printf("%% ");
 
         if (get_input(&line) == -1) {
             break;
         } else {
-            child_pid = fork();
+            pid_t child_pid = fork();
 
             if (child_pid == 0) {
-                char* args[] = {
-                    "/bin/ls",
-                    NULL
-                };
+                // Child process tokenizes the input and executes it.
+                char** args = tokenize(line);
+                int status = execvp(args[0], args);
 
-                exit(execvp("/bin/ls", args));
+                // If we've reached this point, execution failed, so we should
+                // display the error.
+                perror("Execution Error");
+
+                // Since we have the opportunity, free the memory we allocated.
+                free(args);
+
+                // Exit the child with the status code given by 'execvp'.
+                exit(status);
             } else {
-                int status;
-                wait(&status);
+                // The parent should just wait for the child to complete.
+                wait(NULL);
             }
         }
     }
