@@ -17,18 +17,80 @@
 #include <unistd.h>
 
 
+// Store a reference to the size of a character pointer for later use.
 const int CHAR_POINTER_SIZE = sizeof (char*);
+// String containing possible argument delimeters
 const char* WHITESPACE = " \t\n";
+
+
+// Declare functions for later use.
+void execute_command(char* line);
+int get_input(char** line);
+char** tokenize(char *line);
+
+
+/**
+ * Prompt for and run commands until EOF.
+ */
+int main() {
+    while (1) {
+        char *line;
+
+        // Exit if no input was received.
+        if (get_input(&line) == -1) {
+            break;
+        }
+
+        // Fork a child process to execute the command in.
+        pid_t child_pid = fork();
+
+        if (child_pid == 0) {
+            // In child: execute command.
+            execute_command(line);
+        } else if (child_pid < 0) {
+            // In parent: fork failed.
+            perror("Failed to create subprocess");
+        } else {
+            // In parent: waiting for child to complete.
+            wait(NULL);
+        }
+    }
+
+    return 0;
+}
+
+
+/**
+ * Tokenize and execute a command.
+ *
+ * Args:
+ *     line:
+ *         A string containing an executable file and its arguments.
+ */
+void execute_command(char* line) {
+    char** args = tokenize(line);
+
+    // Execute the given command. This will exit the process if the command is
+    // successful, so any code after this is only executed if the command
+    // fails.
+    int status = execvp(args[0], args);
+
+    // Display an informative error message based on how 'execvp' exited.
+    perror("Execution Error");
+
+    // Since we have the opportunity, free the memory we allocated.
+    free(args);
+
+    // Exit the child with the status code given by 'execvp'.
+    exit(status);
+}
 
 
 /**
  * Get a line of input from stdin.
  *
- * Input is retrieved using 'getline'.
- * http://man7.org/linux/man-pages/man3/getline.3.html
- *
- * Function adapted from the following Stack Overflow question:
- * https://stackoverflow.com/questions/12252103/how-to-read-a-line-from-stdin-blocking-until-the-newline-is-found
+ * Function adapted from the following Stack Overflow answer:
+ * https://stackoverflow.com/a/12252195/3762084
  *
  * Args:
  *     line:
@@ -41,6 +103,9 @@ const char* WHITESPACE = " \t\n";
  *     the trailing '\n'. This will be -1 if no input was received (EOF).
  */
 int get_input(char** line) {
+    // Display prompt
+    printf("%% ");
+
     // If we set the line to NULL, 'getline' will allocate enought memory to
     // hold the line automatically.
     *line = NULL;
@@ -58,6 +123,9 @@ int get_input(char** line) {
  *
  * This function splits the given line into 'arguments' where each argument is
  * separated by whitespace.
+ *
+ * Function adapted from the following Stack Overflow answer:
+ * https://stackoverflow.com/a/11198630/3762084
  *
  * Args:
  *     line:
@@ -90,40 +158,4 @@ char** tokenize(char *line) {
     tokenized[num_spaces] = NULL;
 
     return tokenized;
-}
-
-
-int main() {
-    while (1) {
-        char *line;
-
-        printf("%% ");
-
-        if (get_input(&line) == -1) {
-            break;
-        } else {
-            pid_t child_pid = fork();
-
-            if (child_pid == 0) {
-                // Child process tokenizes the input and executes it.
-                char** args = tokenize(line);
-                int status = execvp(args[0], args);
-
-                // If we've reached this point, execution failed, so we should
-                // display the error.
-                perror("Execution Error");
-
-                // Since we have the opportunity, free the memory we allocated.
-                free(args);
-
-                // Exit the child with the status code given by 'execvp'.
-                exit(status);
-            } else {
-                // The parent should just wait for the child to complete.
-                wait(NULL);
-            }
-        }
-    }
-
-    return 0;
 }
