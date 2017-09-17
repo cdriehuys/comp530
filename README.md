@@ -9,6 +9,10 @@ Programming assignments for UNC's COMP 530 course.
 
 Reads in characters from standard input and buffers them to 80 character lines. Some character replacements are also performed.
 
+### HW2 - Simple Shell
+
+Reads in a line from standard input and executes it in its own process.
+
 
 ## License
 
