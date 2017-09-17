@@ -11,6 +11,9 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 
 /**
@@ -46,12 +49,29 @@ int get_input(char** line) {
 
 
 int main() {
-    char *line;
+    while (1) {
+        char *line;
+        pid_t child_pid;
 
-    if (get_input(&line) == -1) {
-        printf("No line received\n");
-    } else {
-        printf("Received line: %s\n", line);
+        printf("%% ");
+
+        if (get_input(&line) == -1) {
+            break;
+        } else {
+            child_pid = fork();
+
+            if (child_pid == 0) {
+                char* args[] = {
+                    "/bin/ls",
+                    NULL
+                };
+
+                exit(execvp("/bin/ls", args));
+            } else {
+                int status;
+                wait(&status);
+            }
+        }
     }
 
     return 0;
