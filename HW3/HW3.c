@@ -29,17 +29,23 @@ typedef struct {
 } ThreadInit;
 
 
+// Declare thread start functions
 void* producer_logic(void* state);
 void* newline_replacer(void * state);
 void* asterisk_replacer(void * state);
 void* consumer_logic(void* state);
 
 
+/**
+ * Run the program.
+ *
+ * The main function initializes each processing thread and starts them.
+ */
 int main() {
     // Initialize ST library
     st_init();
 
-    // Create shared buffers
+    // Create shared buffers to pass data along the processing chain.
     buffer input_buffer;
     initializeBuffer(&input_buffer);
 
@@ -49,7 +55,7 @@ int main() {
     buffer input_buffer3;
     initializeBuffer(&input_buffer3);
 
-    // Create structure used to initialize threads
+    // Create structures used to initialize threads
     ThreadInit init_prod = {
         NULL,
         &input_buffer
@@ -83,6 +89,11 @@ int main() {
 }
 
 
+/**
+ * Read characters from an input stream and write them to a buffer.
+ *
+ * The thread terminates once an EOF character is received.
+ */
 void* producer_logic(void* state) {
     ThreadInit* init = state;
 
@@ -101,11 +112,15 @@ void* producer_logic(void* state) {
 }
 
 
+/**
+ * Move characters between buffers, replacing newlines with spaces.
+ *
+ * The thread terminates once an EOF character is received.
+ */
 void* newline_replacer(void* state) {
     ThreadInit* init = state;
 
     while (1) {
-        // Pull the next character from the buffer
         char c = remoove(init->input_buffer);
 
         if (c == '\n') {
@@ -121,26 +136,37 @@ void* newline_replacer(void* state) {
 }
 
 
+/**
+ * Move characters between buffers, replacing double asterisks with a caret.
+ *
+ * The thread terminates once an EOF character is received.
+ */
 void* asterisk_replacer(void* state) {
     ThreadInit* init = state;
 
+    // Keep track of the last character to determine if it was an asterisk
     char last_char = '\0';
 
     while (1) {
-        // Pull the next character from the buffer
         char c = remoove(init->input_buffer);
 
         if (c == '*' && last_char == '*') {
+            // We found a double asterisk, so deposit a caret
             deposit(init->output_buffer, '^');
             last_char = '\0';
         } else {
             if (last_char != '\0') {
+                // We didn't hit a double asterisk, but the previous character
+                // still needs to be deposited.
                 deposit(init->output_buffer, last_char);
             }
 
+            // Update the last character to the current one
             last_char = c;
         }
 
+        // We still need to deposit an EOF to let other threads know that they
+        // should stop.
         if (c == EOF) {
             deposit(init->output_buffer, c);
 
@@ -150,6 +176,12 @@ void* asterisk_replacer(void* state) {
 }
 
 
+/**
+ * Pull characters from a buffer and output them as fixed length lines.
+ *
+ * Lines are not output unless they are full. When an EOF is received, the
+ * thread terminates.
+ */
 void* consumer_logic(void* state) {
     ThreadInit* init = state;
 
@@ -160,17 +192,16 @@ void* consumer_logic(void* state) {
     int index = 0;
 
     while (1) {
-        // Pull the next character from the buffer
         char c = remoove(init->input_buffer);
 
-        // Exit if we've reached EOF
         if (c == EOF) {
             st_thread_exit(NULL);
         }
 
         line_buffer[index] = c;
 
-        // If we've completed a full line, output it
+        // If we've completed a full line, output it, otherwise increment the
+        // index and continue.
         if (index == LINE_LENGTH - 1) {
             fprintf(OUTPUT_STREAM, "%s\n", line_buffer);
             index = 0;
