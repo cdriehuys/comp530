@@ -14,11 +14,15 @@
 #include "buffer.h"
 #include "st.h"
 
+// Default streams
+#define DEFAULT_INPUT_STREAM stdin;
+
 
 // Structure to hold thread info
 typedef struct {
+    FILE* input_stream;
     FILE* output_stream;
-    buffer* b;
+    buffer* buf;
 } ThreadInit;
 
 
@@ -30,17 +34,19 @@ int main() {
     // Initialize ST library
     st_init();
 
-    // Set output stream
+    // Set streams
+    FILE* input_stream = DEFAULT_INPUT_STREAM;
     FILE* output_stream = stdout;
 
     // Create shared buffer
-    buffer b;
-    initializeBuffer(&b);
+    buffer buf;
+    initializeBuffer(&buf);
 
     // Create structure used to initialize threads
     ThreadInit init = {
+        input_stream,
         output_stream,
-        &b
+        &buf
     };
 
     // Create threads
@@ -57,14 +63,17 @@ int main() {
 void* producer_logic(void* state) {
     ThreadInit* init = state;
 
-    int i;
-    for (i = 0; i < 10; i++) {
-        fprintf(init->output_stream, "Producer produced: %c\n", 'a' + i);
-        fflush(init->output_stream);
+    while (1) {
+        // Read next character from input stream
+        char c = fgetc(init->input_stream);
 
-        deposit(init->b, 'a' + i);
+        // Deposit it in the shared buffer to be processed
+        deposit(init->buf, c);
 
-        st_usleep(333333);
+        // If the character was EOF, terminate the thread.
+        if (c == EOF) {
+            st_thread_exit(NULL);
+        }
     }
 }
 
@@ -72,13 +81,16 @@ void* producer_logic(void* state) {
 void* consumer_logic(void* state) {
     ThreadInit* init = state;
 
-    int i;
-    for (i = 0; i < 10; i++) {
-        char c = remoove(init->b);
+    while (1) {
+        // Pull the next character from the buffer
+        char c = remoove(init->buf);
+
+        // Exit if we've reached EOF
+        if (c == EOF) {
+            st_thread_exit(NULL);
+        }
 
         fprintf(init->output_stream, "Consumer received: %c\n", c);
         fflush(init->output_stream);
-
-        st_usleep(666666);
     }
 }
