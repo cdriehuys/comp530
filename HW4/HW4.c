@@ -82,13 +82,45 @@ int main() {
 }
 
 
+/**
+ * Move characters bettween pipes, replacing double asterisks with a caret.
+ *
+ * Args:
+ *     input_descriptor:
+ *         An integer representing which pipe to read from.
+ *     output_descriptor:
+ *         An integer representing which pipe to output to.
+ */
 void asterisk_replacer(int input_descriptor, int output_descriptor) {
     char c;
+    char last_char = '\0';
 
-    do {
+    while (1) {
         read(input_descriptor, &c, sizeof(char));
-        write(output_descriptor, &c, sizeof(char));
-    } while (c != EOF);
+
+        if (c == '*' && last_char == '*') {
+            // We found a double asterisk, so replace it with a caret
+            c = '^';
+            write(output_descriptor, &c, sizeof(char));
+            last_char = '\0';
+        } else {
+            if (last_char != '\0') {
+                // We didn't hit a double asterisk, so write the previously
+                // stored character.
+                write(output_descriptor, &last_char, sizeof(char));
+            }
+
+            last_char = c;
+        }
+
+        // If we receieved an EOF, write it so other processes can receive it
+        // and then terminate the function.
+        if (c == EOF) {
+            write(output_descriptor, &c, sizeof(char));
+
+            break;
+        }
+    }
 
     exit(EXIT_SUCCESS);
 }
