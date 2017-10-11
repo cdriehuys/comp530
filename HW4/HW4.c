@@ -94,11 +94,28 @@ void asterisk_replacer(int input_descriptor, int output_descriptor) {
 }
 
 
+/**
+ * Move characters between pipes, replacing newlines with spaces.
+ *
+ * Args:
+ *     input_descriptor:
+ *         An integer representing which pipe to read from.
+ *     output_descriptor:
+ *         An integer representing which pipe to output to.
+ */
 void newline_replacer(int input_descriptor, int output_descriptor) {
     char c;
 
     do {
+        // Pull next character from pipe
         read(input_descriptor, &c, sizeof(char));
+
+        // Do replacement if necessary
+        if (c == '\n') {
+            c = ' ';
+        }
+
+        // Write the (replaced) character to the output pipe
         write(output_descriptor, &c, sizeof(char));
     } while (c != EOF);
 
