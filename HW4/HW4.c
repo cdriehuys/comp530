@@ -16,10 +16,18 @@
 #include <unistd.h>
 
 
+// Number of processes other than the ones doing text replacement. This
+// includes the reading and writing processes.
 #define EXTRA_PROCESSES 2
+
+// The stream to read input from.
+#define INPUT_STREAM stdin
+
+// Length of the line to buffer before outputting it.
 #define LINE_LENGTH 80
 
 
+// Define signature for functions that modify the inputted text.
 typedef void (*replacer_func)(int, int);
 
 
@@ -29,20 +37,33 @@ void reader_logic(int output_descriptor);
 void writer_logic(int input_descriptor);
 
 
+// An array containing the functions to run against the inputted text. More
+// text modifications can be done by creating the necessary function and adding
+// it to the array.
 replacer_func replacer_funcs[] = {
     asterisk_replacer,
     newline_replacer
 };
 
 
+/**
+ * Run the main process to spawn and track each child process.
+ *
+ * The process completes when each child process returns.
+ */
 int main() {
     int num_replacers = sizeof(replacer_funcs) / sizeof(replacer_funcs[0]);
+    // We use the number of 'replacer' functions to determine how many
+    // processes are necessary.
     int num_processes = num_replacers + EXTRA_PROCESSES;
+    // We need one less pipe than process since a pipe is used to communicate
+    // between two processes.
     int num_pipes = num_processes - 1;
 
     int i;
     int pipes[num_pipes][2];
 
+    // Initialize the necessary number of pipes
     for (i = 0; i < num_pipes; i++) {
         if (pipe(pipes[i]) == -1) {
             perror("pipe");
@@ -52,6 +73,7 @@ int main() {
 
     pid_t pids[num_processes];
 
+    // Create the appropriate processes
     for (i = 0; i < num_processes; i++) {
         pids[i] = fork();
 
@@ -60,21 +82,25 @@ int main() {
             exit(EXIT_FAILURE);
         } else if (pids[i] == 0) {
             if (i == 0) {
+                // The first process is responsible for reading in characters
+                // from the input stream.
                 reader_logic(pipes[0][1]);
             } else if (i == num_processes - 1) {
+                // The last process is responsible for outputting the
+                // transformed characters it receives.
                 writer_logic(pipes[i - 1][0]);
             } else {
+                // Each 'replacer' function gets its own process.
                 replacer_funcs[i - 1](pipes[i - 1][0], pipes[i][1]);
             }
+
+            exit(EXIT_SUCCESS);
         }
     }
 
-    int status;
-    pid_t pid;
-
+    // Wait for all child processes to complete
     while (i > 0) {
-        pid = wait(&status);
-        printf("Child with PID %ld exited with status 0x%x.\n", (long)pid, status);
+        wait(NULL);
         i--;
     }
 
@@ -118,11 +144,9 @@ void asterisk_replacer(int input_descriptor, int output_descriptor) {
         if (c == EOF) {
             write(output_descriptor, &c, sizeof(char));
 
-            break;
+            return;
         }
     }
-
-    exit(EXIT_SUCCESS);
 }
 
 
@@ -150,20 +174,23 @@ void newline_replacer(int input_descriptor, int output_descriptor) {
         // Write the (replaced) character to the output pipe
         write(output_descriptor, &c, sizeof(char));
     } while (c != EOF);
-
-    exit(EXIT_SUCCESS);
 }
 
 
+/**
+ * Read characters in and pass them to a pipe.
+ *
+ * Args:
+ *     output_descriptor:
+ *         An integer representing the pipe to output to.
+ */
 void reader_logic(int output_descriptor) {
     char c;
 
     do {
-        c = fgetc(stdin);
+        c = fgetc(INPUT_STREAM);
         write(output_descriptor, &c, sizeof(char));
     } while (c != EOF);
-
-    exit(EXIT_SUCCESS);
 }
 
 
@@ -188,7 +215,7 @@ void writer_logic(int input_descriptor) {
 
         // If it's an EOF we want to exit without storing the character
         if (c == EOF) {
-            exit(EXIT_SUCCESS);
+            return;
         }
 
         line[index] = c;
