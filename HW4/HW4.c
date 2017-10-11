@@ -17,6 +17,7 @@
 
 
 #define EXTRA_PROCESSES 2
+#define LINE_LENGTH 80
 
 
 typedef void (*replacer_func)(int, int);
@@ -117,12 +118,39 @@ void reader_logic(int output_descriptor) {
 }
 
 
+/**
+ * Print received characters line-by-line.
+ *
+ * Characters are read into a buffer. The buffer is only printed once it is
+ * full.
+ *
+ * Args:
+ *     input_descriptor:
+ *         An integer representing the pipe to read input from.
+ */
 void writer_logic(int input_descriptor) {
     char c;
+    char line[LINE_LENGTH];
+    int index = 0;
 
-    do {
+    while (1) {
+        // Read the next character from the pipe
         read(input_descriptor, &c, sizeof(char));
-    } while (c != EOF);
 
-    exit(EXIT_SUCCESS);
+        // If it's an EOF we want to exit without storing the character
+        if (c == EOF) {
+            exit(EXIT_SUCCESS);
+        }
+
+        line[index] = c;
+
+        // Print and reset the buffer if it's full, otherwise move on to the
+        // next cell in the buffer.
+        if (index == LINE_LENGTH - 1) {
+            printf("%s\n", line);
+            index = 0;
+        } else {
+            index += 1;
+        }
+    }
 }
