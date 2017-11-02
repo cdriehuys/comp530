@@ -20,6 +20,7 @@
 
 
 #define STRING_CHUNK_SIZE 32
+#define TEMP_FILE_NAME_SIZE 12
 
 
 ServerSocket welcome_socket;
@@ -73,12 +74,41 @@ int main(int argc, char* argv[]) {
 
 void exec_command_service() {
     char* command;
+    pid_t worker_pid;
 
     // The child process doesn't need the welcoming socket
     Socket_close(welcome_socket);
 
+    // Generate a tempfile name and redirect stdout to that file
+    char tempfile[TEMP_FILE_NAME_SIZE];
+    snprintf(tempfile, TEMP_FILE_NAME_SIZE, "temp%d", getpid());
+
     while ((command = read_socket_string(connect_socket)) != NULL) {
-        printf("Read command: %s\n", command);
+        worker_pid = fork();
+
+        if (worker_pid < 0) {
+            perror("fork");
+            exit(EXIT_FAILURE);
+        } else if (worker_pid == 0) {
+            freopen(tempfile, "w", stdout);
+            printf("Running '%s' on child process.\n", command);
+            exit(EXIT_SUCCESS);
+        } else {
+            waitpid(worker_pid, NULL, 0);
+
+            printf("Finished running command on worker.\n");
+
+            FILE* fp = fopen(tempfile, "r");
+
+            char c;
+            do {
+                c = fgetc(fp);
+                Socket_putc(c, connect_socket);
+            } while (c != EOF);
+
+            fclose(fp);
+            remove(tempfile);
+        }
     }
 }
 

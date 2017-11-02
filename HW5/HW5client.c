@@ -56,6 +56,17 @@ int main(int argc, char* argv[]) {
                 exit(EXIT_FAILURE);
             }
         }
+
+        char c;
+        while (1) {
+            c = Socket_getc(connect_socket);
+
+            if (c == EOF) {
+                break;
+            }
+
+            putc(c, stdout);
+        }
     }
 
     Socket_close(connect_socket);
