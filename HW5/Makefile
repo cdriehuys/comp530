@@ -14,10 +14,10 @@ CLIENTDEPS=
 all: HW5server HW5client
 
 HW5server: HW5server.c libsocket.o $(SERVERDEPS)
-		$(CC) $(LDLIBS) -o $@ $^ $(CFLAGS)
+		$(CC) $(LDLIBS) -o $@.out $^ $(CFLAGS)
 
 HW5client: HW5client.c libsocket.o $(CLIENTDEPS)
-		$(CC) $(LDLIBS) -o $@ $^ $(CFLAGS)
+		$(CC) $(LDLIBS) -o $@.out $^ $(CFLAGS)
 
 warning: CFLAGS+=-Wall -Werror
 warning: all

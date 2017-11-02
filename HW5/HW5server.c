@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #include "Socket.h"
 
@@ -26,6 +27,7 @@ void exec_command_service();
 
 
 int main(int argc, char* argv[]) {
+    int child_status;
     pid_t service_pid;
 
     if (argc < 2) {
@@ -57,7 +59,7 @@ int main(int argc, char* argv[]) {
             exit(EXIT_SUCCESS);
         } else {
             Socket_close(connect_socket);
-            waitpid(-1, &chld_status, WNOHANG);
+            waitpid(-1, &child_status, WNOHANG);
         }
     }
 
