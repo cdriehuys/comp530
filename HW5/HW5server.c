@@ -19,11 +19,16 @@
 #include "Socket.h"
 
 
+#define COMMAND_TERMINATOR '\n'
+#define STRING_CHUNK_SIZE 32
+
+
 ServerSocket welcome_socket;
 Socket connect_socket;
 
 
 void exec_command_service();
+char* read_socket_string();
 
 
 int main(int argc, char* argv[]) {
@@ -68,5 +73,46 @@ int main(int argc, char* argv[]) {
 
 
 void exec_command_service() {
-    printf("Would execute command in child process.\n");
+    char* command;
+
+    // The child process doesn't need the welcoming socket
+    Socket_close(welcome_socket);
+
+    while ((command = read_socket_string(connect_socket)) != NULL) {
+        printf("Read command: %s\n", command);
+    }
+}
+
+
+char* read_socket_string(Socket socket) {
+    char c;
+    char* str = NULL;
+    char* tmp = NULL;
+    size_t index = 0;
+    size_t size = 0;
+
+    do {
+        c = Socket_getc(socket);
+        if (c == EOF) {
+            printf("Failed to get character. Received EOF from socket.\n");
+            return NULL;
+        }
+
+        if (index >= size) {
+            size += STRING_CHUNK_SIZE;
+            tmp = realloc(str, size);
+
+            if (tmp == NULL) {
+                printf("Failed to allocate memory for string.");
+                exit(EXIT_FAILURE);
+            }
+
+            str = tmp;
+        }
+
+        str[index] = c;
+        index += 1;
+    } while(c != COMMAND_TERMINATOR);
+
+    return str;
 }
