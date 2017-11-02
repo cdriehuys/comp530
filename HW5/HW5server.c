@@ -19,7 +19,6 @@
 #include "Socket.h"
 
 
-#define COMMAND_TERMINATOR '\n'
 #define STRING_CHUNK_SIZE 32
 
 
@@ -112,7 +111,7 @@ char* read_socket_string(Socket socket) {
 
         str[index] = c;
         index += 1;
-    } while(c != COMMAND_TERMINATOR);
+    } while(c != '\0');
 
     return str;
 }
