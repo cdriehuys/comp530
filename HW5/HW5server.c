@@ -38,11 +38,13 @@ int main(int argc, char* argv[]) {
     int child_status;
     pid_t service_pid;
 
+    // Make sure we received the necessary arguments.
     if (argc < 2) {
-        printf("Please provide a port number for the server.\n");
+        printf("Usage: HW5server <port>\n");
         exit(EXIT_FAILURE);
     }
 
+    // Create a socket that clients can connect to in order to start a session.
     welcome_socket = ServerSocket_new(atoi(argv[1]));
     if (welcome_socket < 0) {
         printf("Failed to create welcome socket.\n");
@@ -50,22 +52,26 @@ int main(int argc, char* argv[]) {
     }
 
     while (1) {
+        // Connect to a specific client
         connect_socket = ServerSocket_accept(welcome_socket);
         if (connect_socket < 0) {
             printf("Failed to accept connection to server socket.\n");
             exit(EXIT_FAILURE);
         }
 
+        // Create a new process to handle a single client's requests
         service_pid = fork();
 
         if (service_pid < 0) {
             perror("fork");
             exit(EXIT_FAILURE);
         } else if (service_pid == 0) {
+            // In the child, handle the client's requests
             exec_command_service();
             Socket_close(connect_socket);
             exit(EXIT_SUCCESS);
         } else {
+            // In the parent daemon process, clean up a zombie if it exists
             Socket_close(connect_socket);
             waitpid(-1, &child_status, WNOHANG);
         }
@@ -75,6 +81,13 @@ int main(int argc, char* argv[]) {
 }
 
 
+/**
+ * Handle execution of a single client's requests.
+ *
+ * For each line received from the client, a new process is forked and the
+ * client's command is executed in it. The worker process handles capturing of
+ * the output and sending it back to the client.
+ */
 void exec_command_service() {
     char* command;
     pid_t worker_pid;
@@ -86,6 +99,7 @@ void exec_command_service() {
     char tempfile[TEMP_FILE_NAME_SIZE];
     snprintf(tempfile, TEMP_FILE_NAME_SIZE, "temp%d", getpid());
 
+    // We continue to loop until no more lines are received from the client.
     while ((command = read_socket_string(connect_socket)) != NULL) {
         worker_pid = fork();
 
@@ -93,20 +107,27 @@ void exec_command_service() {
             perror("fork");
             exit(EXIT_FAILURE);
         } else if (worker_pid == 0) {
+            // In the child, redirect all output to the tempfile
             freopen(tempfile, "a", stdout);
             freopen(tempfile, "a", stderr);
 
+            // Execute the provided command
             char** args = tokenize(command);
             int status = execvp(args[0], args);
 
+            // If we got here, command execution failed, so print an error and
+            // exit.
             perror("execution error");
 
             exit(status);
         } else {
+            // In the worker process, wait for command execution to complete
             waitpid(worker_pid, NULL, 0);
 
-            printf("Finished running command on worker.\n");
+            printf("Finished running command on worker %d.\n", worker_pid);
 
+            // Read the contents of the tempfile that stored the command output
+            // and send it back to the client.
             FILE* fp = fopen(tempfile, "r");
 
             char c;
@@ -122,6 +143,22 @@ void exec_command_service() {
 }
 
 
+/**
+ * Read a null-terminated string from a socket.
+ *
+ * The string is dynamically sized based on the number of characters read. The
+ * size that the string grows by is determined by the STRING_CHUNK_SIZE
+ * constant.
+ *
+ * Args:
+ *     socket:
+ *         The socket to read from.
+ *
+ * Returns:
+ *     A string containing each character read from the socket until a null
+ *     character ('\0') was found. If the string contains EOF, NULL is returned
+ *     instead.
+ */
 char* read_socket_string(Socket socket) {
     char c;
     char* str = NULL;
@@ -136,6 +173,8 @@ char* read_socket_string(Socket socket) {
             return NULL;
         }
 
+        // Our string is not big enough, so allocate STRING_CHUNK_SIZE more
+        // slots.
         if (index >= size) {
             size += STRING_CHUNK_SIZE;
             tmp = realloc(str, size);

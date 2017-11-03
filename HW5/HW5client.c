@@ -28,11 +28,13 @@ int main(int argc, char* argv[]) {
     int line_length;
     Socket connect_socket;
 
+    // Make sure we received the necessary arguments.
     if (argc < 3) {
-        printf("Please provide the hostname and port of the server.\n");
+        printf("Usage: HW5client <hostname> <port>\n");
         exit(EXIT_FAILURE);
     }
 
+    // Create a connection to the command server
     connect_socket = Socket_new(argv[1], atoi(argv[2]));
     if (connect_socket < 0) {
         printf("Failed to connect to server socket.\n");
@@ -50,6 +52,7 @@ int main(int argc, char* argv[]) {
         // Get line length including the null terminator
         line_length = strlen(line) + 1;
 
+        // Send the command to the server
         for (i = 0; i < line_length; i++) {
             if (Socket_putc((int) line[i], connect_socket) == EOF) {
                 printf("Failed to send data to server.\n");
@@ -57,6 +60,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        // Rectrieve a response from the server and output it
         char c;
         while (1) {
             c = Socket_getc(connect_socket);
