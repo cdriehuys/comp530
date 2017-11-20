@@ -4,6 +4,18 @@
  * This program uses memory mapped files to implement a text processing
  * pipeline to read text, perform some transformations, and output it.
  *
+ * References:
+ *   Basic mmap code:
+ *     https://www.cs.unc.edu/~jeffay/courses/comp530/homework/HW6/mmap-example.c
+ *
+ *   Semaphore Usage:
+ *     http://www.csc.villanova.edu/~mdamian/threads/posixsem.html
+ *
+ *   mmap Usage:
+ *     https://www.systutorials.com/docs/linux/man/2-mmap/
+ *     http://beej.us/guide/bgipc/output/html/multipage/mmap.html
+ *
+ *
  * UNC Honor Pledge: I certify that no unauthorized assistance has been
  * received or given in the completion of this work.
  */
