@@ -9,7 +9,7 @@
 #include "semaphore.h"
 
 
-void initializeBuffer(buffer* buf) {
+void initializeBuffer(buffer_t* buf) {
     buf->in = 0;
     buf->out = 0;
 
@@ -19,7 +19,7 @@ void initializeBuffer(buffer* buf) {
 }
 
 
-void deposit(buffer* buf, char c) {
+void deposit(buffer_t* buf, char c) {
     // Ensure there is space in the buffer
     sem_wait(&buf->emptyCells);
 
@@ -31,7 +31,7 @@ void deposit(buffer* buf, char c) {
 }
 
 
-char remoove(buffer* buf) {
+char remoove(buffer_t* buf) {
     // Ensure there is an item in the buffer
     sem_wait(&buf->fullCells);
 

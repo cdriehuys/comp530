@@ -31,12 +31,12 @@
 
 // Structure to hold thread info
 typedef struct {
-    buffer* input_buffer;
-    buffer* output_buffer;
+    buffer_t* input_buffer;
+    buffer_t* output_buffer;
 } state_t;
 
 
-buffer* create_mmap(size_t size);
+buffer_t* create_mmap(size_t size);
 void deleteMMAP(void*);
 
 pid_t forkChild(void (*func)(state_t*), state_t* state);
@@ -59,13 +59,13 @@ int main() {
     int i;
 
     // Create shared buffers to pass data along the processing chain.
-    buffer* input_buffer = create_mmap(sizeof(buffer));
+    buffer_t* input_buffer = create_mmap(sizeof(buffer_t));
     initializeBuffer(input_buffer);
 
-    buffer* input_buffer2 = create_mmap(sizeof(buffer));
+    buffer_t* input_buffer2 = create_mmap(sizeof(buffer_t));
     initializeBuffer(input_buffer2);
 
-    buffer* input_buffer3 = create_mmap(sizeof(buffer));
+    buffer_t* input_buffer3 = create_mmap(sizeof(buffer_t));
     initializeBuffer(input_buffer3);
 
     // Create structures used to initialize threads
@@ -106,7 +106,7 @@ int main() {
 }
 
 
-buffer* create_mmap(size_t size){
+buffer_t* create_mmap(size_t size){
   //These are the neccessary arguments for mmap. See man mmap.
   void* addr = 0;
   int protections = PROT_READ|PROT_WRITE; //can read and write
@@ -115,7 +115,7 @@ buffer* create_mmap(size_t size){
   off_t offset = 0;
 
   //Create memory map
-  buffer* state =  mmap(addr, size, protections, flags, fd, offset);
+  buffer_t* state =  mmap(addr, size, protections, flags, fd, offset);
 
   if (( void *) ERROR == state){//on an error mmap returns void* -1.
     perror("error with mmap");
@@ -128,7 +128,7 @@ buffer* create_mmap(size_t size){
 
 void deleteMMAP(void* addr){
     //This deletes the memory map at given address. see man mmap
-    if (ERROR == munmap(addr, sizeof(buffer))){
+    if (ERROR == munmap(addr, sizeof(buffer_t))){
         perror("error deleting mmap");
         exit(EXIT_FAILURE);
     }

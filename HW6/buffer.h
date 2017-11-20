@@ -18,7 +18,7 @@ typedef struct buffer {
     int out;
     sem_t emptyCells;
     sem_t fullCells;
-} buffer;
+} buffer_t;
 
 /**
  * Initializes an empty buffer. This must be called before using the buffer.
@@ -27,7 +27,7 @@ typedef struct buffer {
  *     buf:
  *         A pointer to the buffer to initialize.
  */
-void initializeBuffer(buffer* buf);
+void initializeBuffer(buffer_t* buf);
 
 /**
  * Place a new character in the buffer.
@@ -41,7 +41,7 @@ void initializeBuffer(buffer* buf);
  *     c:
  *         The character to insert into the buffer.
  */
-void deposit(buffer* buf, char c);
+void deposit(buffer_t* buf, char c);
 
 /**
  * Remove the next character from the buffer.
@@ -56,6 +56,6 @@ void deposit(buffer* buf, char c);
  * Returns:
  *     The next character in the buffer.
  */
-char remoove(buffer* buf);
+char remoove(buffer_t* buf);
 
 #endif
