@@ -43,6 +43,10 @@ $ ./HW5server <port>
 $ ./HW5client <hostname> <port>
 ```
 
+### HW6 - Producer/Consumer with Memory Mapped Files
+
+This is the final rewrite of [HW1](#hw1---linux-refresher). It uses `mmap` to create a shared memory location accessible from different processes. The buffers between each step in the processing chain are stored in this shared memory.
+
 
 ## License
 
